@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ironclad Marauder: Project Cost Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Slate & Muted Teal -->
+    <!-- Application Structure Plan: A dashboard-style layout was chosen to translate the complex cost and materials report into an intuitive, interactive experience. The structure begins with the high-impact total cost, followed by an interactive chart for cost breakdown, and concludes with a detailed, card-based browser for materials and sourcing. This top-down approach allows users to grasp the project's scale first, then explore the specifics at their own pace, making the dense information more digestible and engaging. The new "Donate" section is added as a final call to action, integrated into the navigation to provide a clear path for user contribution. -->
+    <!-- Visualization & Content Choices: Total Cost (Dynamic Text): Goal: Inform, Method: HTML/JS, Justification: Immediately communicates the project's massive scale. Cost Breakdown (Donut Chart): Goal: Compare, Method: Chart.js Canvas, Interaction: Click/Hover updates a detail panel, Justification: Visually effective for part-to-whole data, and interaction provides layered information without clutter. Materials & Sourcing (Interactive Cards): Goal: Organize/Inform, Method: HTML/CSS/JS Grid, Interaction: Click to reveal details, Justification: Organizes complex component data into clean, manageable chunks, encouraging exploration. Donation Section (Text/Button): Goal: Engage/Action, Method: HTML/CSS, Justification: Provides a clear, persuasive call to action, logically placed at the end of the data exploration flow. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+        }
+        .nav-button {
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .nav-button.active {
+            background-color: #0d9488;
+            color: white;
+        }
+        .section {
+            display: none;
+        }
+        .section.active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="min-h-screen">
+        <header class="bg-slate-800 shadow-sm">
+            <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                <h1 class="text-3xl font-bold leading-tight text-slate-100">Ironclad Marauder: Project Analysis</h1>
+                <p class="mt-1 text-slate-400">An interactive dashboard exploring the estimated costs and material sourcing for a next-generation combat robot.</p>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <div class="px-4 py-6 sm:px-0">
+                <nav class="flex justify-center space-x-2 sm:space-x-4 mb-8">
+                    <button id="nav-overview" class="nav-button active text-sm sm:text-base font-medium py-2 px-3 sm:px-4 rounded-full bg-slate-700 text-slate-200 hover:bg-slate-600">Overview</button>
+                    <button id="nav-materials" class="nav-button text-sm sm:text-base font-medium py-2 px-3 sm:px-4 rounded-full bg-slate-700 text-slate-200 hover:bg-slate-600">Materials & Sourcing</button>
+                    <button id="nav-other" class="nav-button text-sm sm:text-base font-medium py-2 px-3 sm:px-4 rounded-full bg-slate-700 text-slate-200 hover:bg-slate-600">Other Factors</button>
+                    <button id="nav-donate" class="nav-button text-sm sm:text-base font-medium py-2 px-3 sm:px-4 rounded-full bg-slate-700 text-slate-200 hover:bg-slate-600">Donate</button>
+                </nav>
+
+                <div id="section-overview" class="section active">
+                    <div class="bg-slate-800 rounded-lg shadow p-6 mb-8 text-center">
+                        <h2 class="text-lg font-medium text-slate-400">Total Estimated Project Cost</h2>
+                        <p class="text-4xl sm:text-5xl font-bold text-teal-400 my-2" id="totalCostDisplay">$400 Million - $1 Billion+</p>
+                        <p class="text-slate-300 max-w-2xl mx-auto">This represents a preliminary estimate for a single prototype unit. Costs can fluctuate significantly based on final specifications, supply chain stability, and regulatory requirements.</p>
+                    </div>
+
+                    <div class="bg-slate-800 rounded-lg shadow p-6">
+                        <h2 class="text-xl font-bold text-slate-100 mb-1">Estimated Cost Breakdown</h2>
+                        <p class="text-slate-400 mb-6">The total cost is distributed across several key phases, from initial concept to final testing. Interact with the chart below to see details for each category. This visualization helps to understand which stages of development command the largest portions of the budget.</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                            <div class="chart-container">
+                                <canvas id="costChart"></canvas>
+                            </div>
+                            <div id="chartDetails" class="bg-slate-700 p-6 rounded-lg min-h-[300px] flex flex-col justify-center">
+                                <h3 class="text-lg font-bold text-slate-200" id="detailsTitle">Select a Category</h3>
+                                <p class="text-slate-300" id="detailsText">Click on a segment of the donut chart to learn more about its role in the overall project cost.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="section-materials" class="section">
+                    <div class="bg-slate-800 rounded-lg shadow p-6">
+                         <h2 class="text-xl font-bold text-slate-100 mb-1">Component Sourcing & Challenges</h2>
+                        <p class="text-slate-400 mb-6">Building the Ironclad Marauder requires a complex supply chain of highly specialized materials and technologies. Many components are subject to strict regulations and geopolitical factors. Below is an overview of key material categories, their potential sources, and the challenges associated with acquiring them.</p>
+                        <div id="materialsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="section-other" class="section">
+                     <div class="bg-slate-800 rounded-lg shadow p-6">
+                        <h2 class="text-xl font-bold text-slate-100 mb-1">Additional Considerations & Hidden Costs</h2>
+                        <p class="text-slate-400 mb-6">Beyond direct material and manufacturing expenses, a project of this magnitude involves significant overhead and logistical complexities that contribute to the final cost. These factors are crucial for realistic project planning and are often underestimated.</p>
+                        <ul id="otherFactorsList" class="space-y-4">
+                        </ul>
+                    </div>
+                </div>
+                
+                <div id="section-donate" class="section">
+                    <div class="bg-slate-800 rounded-lg shadow p-6 text-center">
+                        <h2 class="text-2xl font-bold text-slate-100 mb-4">Power the Future: Support the Ironclad Marauder Project</h2>
+                        <p class="text-slate-300 max-w-2xl mx-auto mb-6">The Ironclad Marauder is more than just a machine; it's a vision for the future of engineering and defense. From cutting-edge robotics to groundbreaking materials, every step forward requires significant resources. Your contribution, no matter the size, directly fuels our R&D, secures critical materials, and helps us overcome the immense challenges on the path to building this prototype. By donating, you're not just supporting a project—you're investing in a new era of technological innovation. Help us turn this blueprint into reality.</p>
+                        <a href="#" class="inline-block bg-teal-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-teal-500 transition duration-300 ease-in-out">Donate Now</a>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    <footer class="bg-slate-900 py-4 mt-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-slate-400 text-sm">
+            <p>Created by Sean Letlhoagoje</p>
+        </div>
+    </footer>
+    </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const costData = {
+            labels: ['R&D and Design', 'Materials', 'Manufacturing & Assembly', 'Testing & Refinement'],
+            datasets: [{
+                data: [75, 350, 200, 75],
+                backgroundColor: ['#0d9488', '#0f766e', '#115e59', '#134e4a'],
+                borderColor: '#ffffff',
+                borderWidth: 4,
+                hoverBackgroundColor: ['#14b8a6', '#11a395', '#14857b', '#166e66'],
+            }]
+        };
+
+        const costDetails = [
+            { title: 'R&D and Design', text: 'Estimated at $50 - $100 million. This phase includes conceptualization, engineering, software development, and creating initial blueprints. It is foundational and requires a world-class team of engineers and scientists.' },
+            { title: 'Materials', text: 'Estimated at $200 - $500 million. The single largest cost component. This includes acquiring all raw and refined materials like advanced composites, titanium alloys, and sensitive electronic components. Prices are volatile and subject to market forces.' },
+            { title: 'Manufacturing & Assembly', text: 'Estimated at $100 - $300 million. Covers the cost of specialized facilities, precision machinery, and the highly skilled labor required to construct the robot. This phase is complex and requires stringent quality control.' },
+            { title: 'Testing & Refinement', text: 'Estimated at $50 - $100 million. Involves rigorous field testing, stress tests, software debugging, and iterative improvements based on performance data. This ensures the final product is combat-ready and reliable.' }
+        ];
+
+        const materialsData = [
+            { title: 'Advanced Composites', icon: '💎', sourcing: 'Specialized materials suppliers (e.g., Toray, Hexcel), aerospace industry suppliers.', challenges: 'High cost, export restrictions, and requires specialized manufacturing techniques.' },
+            { title: 'Titanium Alloy', icon: '🔩', sourcing: 'Global metal suppliers, often with ties to the aerospace and defense industries.', challenges: 'High cost and a supply chain that can be influenced by geopolitical tensions.' },
+            { title: 'Reactive Armor Plating', icon: '🛡️', sourcing: 'Established defense contractors and specialized military suppliers.', challenges: 'Highly regulated technology that requires government contracts and security clearance to procure.' },
+            { title: 'Servo Motors & Actuators', icon: '⚙️', sourcing: 'Robotics component manufacturers (e.g., Siemens, ABB), specialized engineering firms.', challenges: 'High-precision, high-torque components are expensive and may have long lead times.' },
+            { title: 'Power Systems', icon: '⚡', sourcing: 'Energy companies for fuel cells; nuclear tech providers for micro-reactors (highly theoretical).', challenges: 'Extreme costs, significant safety and regulatory hurdles, and unproven scalability for a mobile platform.' },
+            { title: 'Weapon Systems', icon: '💥', sourcing: 'Major defense contractors and military weapons manufacturers.', challenges: 'Subject to strict international arms regulations, requires government oversight, and involves massive development costs.' },
+            { title: 'Sensors & Electronics', icon: '📡', sourcing: 'Sensor manufacturers (e.g., Raytheon), and semiconductor companies (e.g., NVIDIA, Intel).', challenges: 'Cutting-edge AI hardware and high-performance sensors are extremely expensive and may face export controls.' },
+            { title: 'Pilot Cockpit & Life Support', icon: '🧑‍🚀', sourcing: 'Aerospace companies and specialized vehicle manufacturers.', challenges: 'Ensuring pilot safety and system redundancy in extreme combat conditions is a complex engineering feat.' }
+        ];
+        
+        const otherFactorsData = [
+            { title: 'Government Approvals & Regulations', icon: '⚖️', text: 'Navigating the complex web of defense procurement, export controls, and weapons regulations is a lengthy and costly legal process.' },
+            { title: 'Facility Costs', icon: '🏭', text: 'Requires secure, specialized facilities for R&D, manufacturing, and testing, representing a significant capital investment.' },
+            { title: 'Ongoing Maintenance & Support', icon: '🔧', text: 'The operational lifecycle cost, including maintenance, repairs, and software updates, can eventually exceed the initial purchase price.' },
+            { title: 'Pilot Training', icon: '🎓', text: 'Developing training programs, simulators, and materials for pilots requires a substantial investment in personnel and technology.'}
+        ];
+
+        const detailsTitle = document.getElementById('detailsTitle');
+        const detailsText = document.getElementById('detailsText');
+        const materialsGrid = document.getElementById('materialsGrid');
+        const otherFactorsList = document.getElementById('otherFactorsList');
+        
+        const sections = document.querySelectorAll('.section');
+        const navButtons = document.querySelectorAll('.nav-button');
+
+        function switchTab(targetId) {
+            sections.forEach(section => {
+                section.classList.toggle('active', section.id === targetId);
+            });
+            navButtons.forEach(button => {
+                button.classList.toggle('active', button.id === `nav-${targetId.split('-')[1]}`);
+            });
+        }
+
+        navButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetId = `section-${button.id.split('-')[1]}`;
+                switchTab(targetId);
+            });
+        });
+
+        const ctx = document.getElementById('costChart').getContext('2d');
+        const costChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: costData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '60%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            font: {
+                                size: 14,
+                            },
+                            color: '#e2e8f0'
+                        }
+                    },
+                    tooltip: {
+                        enabled: true,
+                        backgroundColor: '#1e293b',
+                        titleFont: {
+                            size: 16,
+                            weight: 'bold'
+                        },
+                        bodyFont: {
+                            size: 14
+                        },
+                        padding: 12,
+                        cornerRadius: 4,
+                    }
+                },
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        detailsTitle.textContent = costDetails[index].title;
+                        detailsText.textContent = costDetails[index].text;
+                    }
+                }
+            }
+        });
+
+        materialsData.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'card bg-slate-800 rounded-lg shadow p-6 flex flex-col items-center text-center';
+            card.innerHTML = `
+                <div class="text-4xl mb-4">${item.icon}</div>
+                <h3 class="text-lg font-bold text-slate-200 mb-2">${item.title}</h3>
+                <div class="text-left w-full mt-4 border-t border-slate-700 pt-4 text-slate-300">
+                    <p class="mb-2"><strong class="font-semibold text-slate-200">Sourcing:</strong> ${item.sourcing}</p>
+                    <p><strong class="font-semibold text-slate-200">Challenges:</strong> ${item.challenges}</p>
+                </div>
+            `;
+            materialsGrid.appendChild(card);
+        });
+        
+        otherFactorsData.forEach(item => {
+            const listItem = document.createElement('li');
+            listItem.className = 'flex items-start bg-slate-700 p-4 rounded-lg';
+            listItem.innerHTML = `
+                <div class="text-3xl mr-4">${item.icon}</div>
+                <div>
+                    <h3 class="font-bold text-slate-200">${item.title}</h3>
+                    <p class="text-slate-300">${item.text}</p>
+                </div>
+            `;
+            otherFactorsList.appendChild(listItem);
+        });
+    });
+</script>
+
+</body>
+</html>
